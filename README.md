@@ -1,2 +1,2 @@
 # fundamental
-基础设置
+大基本功
