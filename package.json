@@ -1,0 +1,30 @@
+{
+  "name": "fundamental",
+  "version": "1.0.0",
+  "description": "大基本功",
+  "type": "module",
+  "scripts": {
+    "check": "npm run lint && npm run format:check",
+    "test": "npm run check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint src/coding/",
+    "lint:fix": "eslint src/coding/ --fix",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22.22.1"
+  },
+  "packageManager": "npm@10.9.3",
+  "license": "ISC",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.1.0",
+    "prettier": "^3.9.6"
+  }
+}
