@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>秒表</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 40px 20px;
+        background: #f4f6fa;
+        color: #202a3b;
+        font-family: system-ui, sans-serif;
+      }
+
+      main {
+        max-width: 960px;
+        margin: auto;
+      }
+
+      h1 {
+        margin-top: 0;
+        font-size: 24px;
+      }
+
+      .total,
+      .panel {
+        padding: 28px;
+        border: 1px solid #e1e6ef;
+        border-radius: 20px;
+        background: white;
+      }
+
+      .total {
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .label,
+      .hint {
+        color: #637086;
+      }
+
+      .time {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      #totalTime {
+        display: block;
+        margin: 14px 0;
+        font-size: clamp(32px, 7vw, 64px);
+        font-weight: 650;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      h2 {
+        margin: 0 0 20px;
+        font-size: 18px;
+      }
+
+      #segmentTime {
+        display: block;
+        margin: 24px 0;
+        font-size: clamp(24px, 4vw, 36px);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      button {
+        padding: 12px 20px;
+        border: 0;
+        border-radius: 10px;
+        background: #eaf0fa;
+        color: #244b87;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      #toggleButton {
+        background: #2563eb;
+        color: white;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      button:focus-visible {
+        outline: 3px solid #93b4ff;
+        outline-offset: 3px;
+      }
+
+      .hint {
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      #records {
+        max-height: 360px;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        list-style: none;
+      }
+
+      #records li {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid #edf0f5;
+      }
+
+      #records li:first-child {
+        color: #2563eb;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 20px 12px;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .total,
+        .panel {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>秒表</h1>
+      <section class="total" aria-label="总计时">
+        <span class="label">总用时</span>
+        <output id="totalTime" class="time">00:00:00.000</output>
+        <span id="status" role="status">准备开始</span>
+      </section>
+      <div class="layout">
+        <section class="panel" aria-labelledby="currentHeading">
+          <h2 id="currentHeading">当前分段</h2>
+          <output id="segmentTime" class="time" aria-label="当前分段用时">00:00:00.000</output>
+          <div class="controls">
+            <button id="toggleButton" type="button">开始</button>
+            <button id="lapButton" type="button" disabled>计次</button>
+            <button id="resetButton" type="button" disabled>重置</button>
+          </div>
+          <p class="hint">点击“计次”记录当前分段，并立即开始下一段。暂停期间不计时。</p>
+        </section>
+        <section class="panel" aria-labelledby="recordsHeading">
+          <h2 id="recordsHeading">分段记录 · <span id="recordCount">0</span> 次</h2>
+          <p id="emptyState" class="hint">开始后点击“计次”，这里会显示每一段的独立用时。</p>
+          <ol id="records" aria-label="分段用时记录，最新在前"></ol>
+        </section>
+      </div>
+    </main>
+    <script type="module">
+      const totalTime = document.querySelector('#totalTime');
+      const segmentTime = document.querySelector('#segmentTime');
+      const status = document.querySelector('#status');
+      const toggleButton = document.querySelector('#toggleButton');
+      const lapButton = document.querySelector('#lapButton');
+      const resetButton = document.querySelector('#resetButton');
+      const records = document.querySelector('#records');
+      const recordCount = document.querySelector('#recordCount');
+      const emptyState = document.querySelector('#emptyState');
+
+      let running = false;
+      let accumulatedTime = 0;
+      let startedAt = 0;
+      let lastLapTime = 0;
+      let lapCount = 0;
+      let frameId = null;
+
+      function formatTime(milliseconds) {
+        const value = Math.floor(milliseconds);
+        const hours = Math.floor(value / 3600000);
+        const minutes = Math.floor((value % 3600000) / 60000);
+        const seconds = Math.floor((value % 60000) / 1000);
+        const millis = value % 1000;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+      }
+
+      function getElapsedTime() {
+        return accumulatedTime + (running ? performance.now() - startedAt : 0);
+      }
+
+      function render() {
+        const elapsed = getElapsedTime();
+        totalTime.textContent = formatTime(elapsed);
+        segmentTime.textContent = formatTime(elapsed - lastLapTime);
+      }
+
+      function tick() {
+        render();
+        if (running) {
+          frameId = requestAnimationFrame(tick);
+        }
+      }
+
+      toggleButton.addEventListener('click', () => {
+        if (running) {
+          accumulatedTime = getElapsedTime();
+          running = false;
+          cancelAnimationFrame(frameId);
+          toggleButton.textContent = '继续';
+          status.textContent = '已暂停';
+          render();
+        } else {
+          startedAt = performance.now();
+          running = true;
+          toggleButton.textContent = '暂停';
+          status.textContent = '计时中';
+          tick();
+        }
+        lapButton.disabled = !running;
+        resetButton.disabled = false;
+      });
+
+      lapButton.addEventListener('click', () => {
+        if (!running) return;
+        const elapsed = getElapsedTime();
+        const duration = elapsed - lastLapTime;
+        lastLapTime = elapsed;
+        lapCount += 1;
+
+        const row = document.createElement('li');
+        const label = document.createElement('span');
+        const time = document.createElement('span');
+        label.textContent = `第 ${lapCount} 段`;
+        time.className = 'time';
+        time.textContent = formatTime(duration);
+        row.append(label, time);
+        records.prepend(row);
+        records.scrollTop = 0;
+        recordCount.textContent = lapCount;
+        emptyState.hidden = true;
+        render();
+      });
+
+      resetButton.addEventListener('click', () => {
+        running = false;
+        cancelAnimationFrame(frameId);
+        accumulatedTime = 0;
+        startedAt = 0;
+        lastLapTime = 0;
+        lapCount = 0;
+        records.replaceChildren();
+        recordCount.textContent = '0';
+        emptyState.hidden = false;
+        toggleButton.textContent = '开始';
+        status.textContent = '准备开始';
+        lapButton.disabled = true;
+        resetButton.disabled = true;
+        render();
+      });
+    </script>
+  </body>
+</html>

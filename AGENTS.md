@@ -2,17 +2,21 @@
 
 ## Project Structure & Module Organization
 
-This is a Chinese-language learning repository for front-end fundamentals. JavaScript exercises and scratch examples live in `src/coding/`; focused topics use descriptive subdirectories such as `src/coding/js基础题/`. Engineering notes live in `src/工程化/`, for example `src/工程化/eslint/介绍.md`. Treat the entire `src/` tree as frozen unless the user explicitly authorizes a change. Root-level files own shared tooling: `eslint.config.mjs`, `.prettierrc`, `.lintstagedrc.json`, and `.husky/`.
+This is a Chinese-language learning repository for front-end fundamentals with a React + TypeScript application. Keep `src/` dedicated to the app: `src/main.tsx` mounts `src/App.tsx`, global styles live in `src/styles/index.css`, and new components belong in `src/components/`. Standalone JavaScript exercises live in `examples/coding/`; HTML tools live in `examples/tools/`. Learning notes live in `docs/react/`, `docs/工程化/`, and `docs/真题/`. These existing examples and learning notes remain frozen unless the user explicitly authorizes changes; React app files are writable. Vite plugins live in `config/vite/`, and engineering scripts live in `scripts/`. Root-level files retain standard tooling configuration: `vite.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc`, `.lintstagedrc.json`, and `.husky/`.
 
 ## Build, Test, and Development Commands
 
-There is no build or local server. Use npm only; Node.js 22.22.1 or later is required. Run `npm install` to install dependencies and enable Husky through `prepare`.
+Vite and its React plugin provide a local development server and production build. `vite.config.ts` sets `src/main.tsx` as the entry; `config/vite/tsx-entry.ts` generates the HTML shell for development and production, so there is no root-level source `index.html`. `config/vite/legacy-paths.ts` preserves old learning-material URLs in development. Use pnpm 12.18.0 only; Node.js 22.22.1 or later is required. Run `pnpm install --frozen-lockfile` to install dependencies and enable Husky through `prepare`.
 
-- `npm run lint` checks JavaScript under `src/coding/` with ESLint.
-- `npm run lint:fix` applies safe ESLint fixes in that directory.
-- `npm run format:check` verifies Prettier formatting without writing files.
-- `npm run format` formats writable repository files; `src/` is intentionally ignored.
-- `npm test` runs the combined lint and format quality gate.
+- `pnpm dev` starts the Vite server on localhost (default port 5173).
+- `pnpm typecheck` checks TypeScript without emitting files.
+- `pnpm build` checks types and builds the React app into `dist/`.
+- `pnpm preview` serves the production build locally.
+- `pnpm run lint` checks JavaScript exercises, TypeScript, and React Hooks with ESLint.
+- `pnpm run lint:fix` applies ESLint fixes; do not use it to change frozen learning content without authorization.
+- `pnpm run format:check` verifies Prettier formatting without writing files.
+- `pnpm run format` runs Prettier across the repository; avoid using it to change frozen learning content without authorization. Format explicitly named writable files during scoped changes.
+- `pnpm test` runs the combined type, lint, and format quality gate.
 
 ## Coding Style & Naming Conventions
 
@@ -20,7 +24,7 @@ Use the configured Prettier style: two spaces, semicolons, single quotes, traili
 
 ## Testing Guidelines
 
-No unit-test framework or coverage target is configured. `npm test` is the current quality gate. When adding reusable behavior, introduce focused tests named after the feature, for example `debounce.test.js`, and document manual verification in the pull request.
+No unit-test framework or coverage target is configured. `pnpm test` is the current quality gate. When adding reusable behavior, introduce focused tests named after the feature, for example `debounce.test.js`, and document manual verification in the pull request.
 
 ## Commit & Pull Request Guidelines
 
